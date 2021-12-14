@@ -1,0 +1,7 @@
+flask
+requests
+pyjwt
+jproperties
+configparser
+boto3
+mlflow
