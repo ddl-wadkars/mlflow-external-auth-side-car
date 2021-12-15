@@ -28,7 +28,7 @@ lst = client.list_experiments()
 print(lst)
 
 client = mlflow.tracking.MlflowClient(tracking_uri=TRACKING_URI)
-name = "Fake Experiment"
+name = "Z-Fake Experiment-101"
 experiment_name =  name
 experiment = client.get_experiment_by_name(name=experiment_name)
 print(experiment_name)
@@ -59,7 +59,8 @@ with open("/tmp/test.log", 'w') as f:
 
 
 #Change user name
-with mlflow.start_run(tags={'mlflow.user':'test_user'}):
+with mlflow.start_run(tags={'mlflow.user':'wadkars'}):
+#with mlflow.start_run():
     lr = ElasticNet(alpha=alpha, l1_ratio=l1_ratio, random_state=42)
     lr.fit(train_x, train_y)
     predicted_qualities = lr.predict(test_x)
