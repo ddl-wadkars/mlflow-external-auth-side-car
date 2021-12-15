@@ -11,4 +11,4 @@ ADD src /app
 RUN mkdir /tmp/domino
 ARG MLFLOW_TRACKING_URI
 #USER 1000
-ENTRYPOINT ["python",  "/app/mlflow-auth-proxy.py" ,$MLFLOW_TRACKING_URI, "6010"]
+ENTRYPOINT ["python",  "/app/mlflow-auth-proxy.py" ,"$MLFLOW_TRACKING_URI", "6010"]

@@ -8,3 +8,11 @@ export MLFLOW_TRACKING_URI="${MLFLOW_TRACKING_URI:-https://myfield_registry.com/
 export MLFLOW_PORT="${MLFLOW_PORT:-8000}"
 python src/mlflow-auth-proxy.py $MLFLOW_TRACKING_URL $MLFLOW_PORT
 ```
+
+- Run a MLFLow Client code
+
+```shell
+python src/mlflow-test.py
+```
+
+- Access the MLFlow [UI](http://locahost:8000/)
