@@ -24,15 +24,12 @@ def eval_metrics(actual, pred):
 TRACKING_URI = 'http://127.0.0.1:8000/'
 #TRACKING_URI = 'https://fieldregistry.cs.domino.tech/mlflow/'
 client = mlflow.tracking.MlflowClient(tracking_uri=TRACKING_URI)
-lst = client.list_experiments()
-print(lst)
 
 client = mlflow.tracking.MlflowClient(tracking_uri=TRACKING_URI)
+
 name = "Z-Fake Experiment-101"
 experiment_name =  name
 experiment = client.get_experiment_by_name(name=experiment_name)
-print(experiment_name)
-print(experiment)
 mlflow.set_tracking_uri(TRACKING_URI)
 mlflow.set_experiment(experiment_name=experiment_name)
 csv_url = (
@@ -59,8 +56,7 @@ with open("/tmp/test.log", 'w') as f:
 
 
 #Change user name
-with mlflow.start_run(tags={'mlflow.user':'wadkars'}):
-#with mlflow.start_run():
+with mlflow.start_run(tags={'mlflow.user':'wadkars','mlflow.project':'mlflow-demo'}):
     lr = ElasticNet(alpha=alpha, l1_ratio=l1_ratio, random_state=42)
     lr.fit(train_x, train_y)
     predicted_qualities = lr.predict(test_x)
@@ -84,9 +80,9 @@ with mlflow.start_run(tags={'mlflow.user':'wadkars'}):
     # Model registry does not work with file store
     if tracking_url_type_store != "file":
         mlflow.sklearn.log_model(lr, "model", registered_model_name="DEMO-ElasticnetWineModel-11")
-        print('2')
+
     else:
-        print('1')
+
         mlflow.sklearn.log_model(lr, "model")
     mlflow.log_artifact("/tmp/test.txt")
-    #mlflow.log_artifact("/tmp/test.log")
+    mlflow.log_artifact("/tmp/test.log")
