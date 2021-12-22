@@ -28,12 +28,9 @@ def set_experiment(experiment_name,user,project):
         client.set_experiment_tag(experiment_id, "domino.user", user)
         client.set_experiment_tag(experiment_id, "domino.project", project)
     else:
-        print('Experiment Tags')
-        print(experiment.tags)
         experiment_id = experiment.experiment_id
 
     experiment = client.get_experiment(experiment_id)
-    print(experiment_name)
     mlflow.set_experiment(experiment_name=experiment_name)
     return experiment
 
