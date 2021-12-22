@@ -15,26 +15,37 @@ import mlflow.sklearn
 
 import logging
 
-def eval_metrics(actual, pred):
-    rmse = np.sqrt(mean_squared_error(actual, pred))
-    mae = mean_absolute_error(actual, pred)
-    r2 = r2_score(actual, pred)
-    return rmse, mae, r2
 
 TRACKING_URI = 'http://127.0.0.1:8000/'
-#TRACKING_URI = 'https://fieldregistry.cs.domino.tech/mlflow/'
 client = mlflow.tracking.MlflowClient(tracking_uri=TRACKING_URI)
+mlflow.tracking.set_tracking_uri(TRACKING_URI)
+os.environ['MLFLOW_TRACKING_TOKEN']='test-fake-token'
+def set_experiment(experiment_name,user,project):
+    experiment = client.get_experiment_by_name(experiment_name)
+    experiment_id = None
+    if (experiment == None):
+        experiment_id = client.create_experiment(experiment_name)
+        client.set_experiment_tag(experiment_id, "domino.user", user)
+        client.set_experiment_tag(experiment_id, "domino.project", project)
+    else:
+        print('Experiment Tags')
+        print(experiment.tags)
+        experiment_id = experiment.experiment_id
 
-client = mlflow.tracking.MlflowClient(tracking_uri=TRACKING_URI)
+    experiment = client.get_experiment(experiment_id)
+    print(experiment_name)
+    mlflow.set_experiment(experiment_name=experiment_name)
+    return experiment
 
-name = "Z-Fake Experiment-101"
-experiment_name =  name
-experiment = client.get_experiment_by_name(name=experiment_name)
-mlflow.set_tracking_uri(TRACKING_URI)
+experiment_name = "sameer-Fake Experiment-103"
+user = 'wadkars'
+project = 'mlflow-demo'
+experiment = set_experiment(experiment_name,user,project)
 
 
 
-mlflow.set_experiment(experiment_name=experiment_name)
+
+
 csv_url = (
      "http://archive.ics.uci.edu/ml/machine-learning-databases/wine-quality/winequality-red.csv"
 )
@@ -56,10 +67,15 @@ with open("/tmp/test.txt", 'w') as f:
     f.write(my_log)
 with open("/tmp/test.log", 'w') as f:
     f.write(my_log)
+def eval_metrics(actual, pred):
+    rmse = np.sqrt(mean_squared_error(actual, pred))
+    mae = mean_absolute_error(actual, pred)
+    r2 = r2_score(actual, pred)
+    return rmse, mae, r2
 
 
 #Change user name
-with mlflow.start_run(tags={'mlflow.user':'wadkars','mlflow.project':'mlflow-demo'}):
+with mlflow.start_run(tags={'mlflow.user':user,'mlflow.project':project, 'domino.project':project}):
     lr = ElasticNet(alpha=alpha, l1_ratio=l1_ratio, random_state=42)
     lr.fit(train_x, train_y)
     predicted_qualities = lr.predict(test_x)
@@ -78,14 +94,18 @@ with mlflow.start_run(tags={'mlflow.user':'wadkars','mlflow.project':'mlflow-dem
     mlflow.log_metric("mae", mae)
 
     tracking_url_type_store = urlparse(mlflow.get_tracking_uri()).scheme
+    print('XXX')
     print(mlflow.get_tracking_uri())
     print(tracking_url_type_store)
     # Model registry does not work with file store
     if tracking_url_type_store != "file":
-        mlflow.sklearn.log_model(lr, "model", registered_model_name="DEMO-ElasticnetWineModel-11")
+        mlflow.sklearn.log_model(lr, "model", registered_model_name="DEMO2-ElasticnetWineModel")
 
     else:
 
         mlflow.sklearn.log_model(lr, "model")
     mlflow.log_artifact("/tmp/test.txt")
     mlflow.log_artifact("/tmp/test.log")
+
+experiment = client.get_experiment_by_name(experiment_name)
+print(experiment.tags)

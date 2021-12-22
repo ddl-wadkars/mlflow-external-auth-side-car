@@ -72,6 +72,8 @@ def proxy(path,**kwargs):
     logging.info('Default GET ' + SITE_NAME)
     logging.info('Default GET PATH ' + path)
 
+    print(path)
+    print(request.headers)
     if request.method=='GET':
 
         url = f'{SITE_NAME}{path}'
