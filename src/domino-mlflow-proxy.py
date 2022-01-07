@@ -6,6 +6,7 @@ import requests
 import logging
 import json
 from jproperties import Properties
+import utils
 
 app = Flask(__name__)
 ADMIN_USER='test-user-1'
@@ -19,7 +20,7 @@ def index():
     response = Response(resp.content, resp.status_code, headers)
     return response
 
-def access_control_for_get_experiments(path,params,resp):
+def access_control_for_get_experiments(path,params,resp,user_name):
     if (path.endswith('experiments/list')):
         resp_content_json = json.loads(resp.content)
         #return resp
@@ -39,43 +40,55 @@ def access_control_for_get_experiments(path,params,resp):
 
 def validate_tags(path,my_json):
     if (path.endswith('runs/create')):
-        if ('tags' not in my_json):
-            response = Exception('You must provide tag for mlflow.user and mlflow.project', 400)
-            return response
-        else:
-            tags = my_json['tags']
-            user_found = False
-            project_found = False
+        tags = my_json['tags']
+        user_found = False
+        project_found = False
+        for t in tags:
+            if (t['key'] == 'mlflow.parentRunId'):
+                user_found = True  # Nested runs do not check for user name consistency
+                break
 
-            for t in tags:
-                if (t['key'] == 'mlflow.user'):
-                    if (t['value'] == user_name):
-                        user_found = True
-                    else:
-                        return 'mlflow.user must be the current user = ' + user_name
-                if (t['key'] == 'mlflow.project'):
-                    if (t['value'] == project_name):
-                        project_found = True
-                    else:
-                        return 'mlflow.project must be the current project = ' + project_name
+        for t in tags:
+            if (t['key'] == 'mlflow.user' and not user_found):
+                if (t['value'] == user_name):
+                    user_found = True
+                else:
+                    return 'mlflow.user must be the current user = ' + user_name
 
-            if (not user_found or not project_found):
-                return 'You must provide correct tag values for mlflow.user and mlflow.project'
+            if (t['key'] == 'mlflow.project'):
+                if (t['value'] == project_name):
+                    project_found = True
+                else:
+                    return 'mlflow.project must be the current project = ' + project_name
+        if (not user_found or not project_found):
+            return 'You must provide correct tag values for mlflow.user and mlflow.project'
     return ''
+
+def get_user_name(token):
+    headers={'X-Domino-Api-Key':token}
+    json = requests.get(os.environ['DOMINO_API_HOST']+who_am_i_endpoint, headers=headers)
+    return json['canonicalName']
+
+def get_user_name(username,password):
+    pass
+
 
 @app.route('/<path:path>',methods=['GET','POST','DELETE'])
 def proxy(path,**kwargs):
     global SITE_NAME
     logging.info('Default GET ' + SITE_NAME)
     logging.info('Default GET PATH ' + path)
+    user_name = utils.read_auth_tokens(request)
+    print(user_name)
+    ##Read all tokens
 
-    logging.info(request.headers)
+    ##logging.info(request.headers)
     ##logging.info(json.dumps(request.headers))
     if request.method=='GET':
 
         url = f'{SITE_NAME}{path}'
         resp = requests.get(f'{SITE_NAME}{path}',params=request.args)
-        content = access_control_for_get_experiments(path,request.args,resp)
+        content = access_control_for_get_experiments(path,request.args,resp,user_name)
         logging.info(url)
         logging.info(resp)
 
@@ -89,8 +102,7 @@ def proxy(path,**kwargs):
         return response
     elif request.method=='POST':
         my_json=request.get_json()
-        print(my_json)
-        #error_str = validate_tags(path,request.get_json())
+        error_str = validate_tags(path,request.get_json())
         #if(not error_str==''):
             #response = Response(error_str, 400)
             #return response
@@ -125,6 +137,7 @@ user_name=''
 project_name=''
 project_owner_name=''
 root_folder=''
+who_am_i_endpoint = 'v4/auth/principal'
 
 if __name__ == '__main__':
     SITE_NAME = sys.argv[1]
