@@ -9,6 +9,6 @@ RUN pip install --upgrade pip
 RUN pip install --user -r requirements.txt
 ADD src /app
 RUN mkdir /tmp/domino
-ARG MLFLOW_TRACKING_URI
 #USER 1000
-ENTRYPOINT ["python",  "/app/mlflow-auth-proxy.py" ,"https://fieldregistry.cs.domino.tech/mlflow/","/", "6010"]
+ENTRYPOINT ["python",  "/app/mlflow-auth-proxy.py" ] 
+#,"https://fieldregistry.cs.domino.tech/mlflow/","/", "6010"]

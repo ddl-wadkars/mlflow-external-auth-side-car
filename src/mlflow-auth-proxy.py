@@ -10,6 +10,7 @@ from jproperties import Properties
 app = Flask(__name__)
 ADMIN_USER='test-user-1'
 
+
 @app.route('/')
 def index():
     logging.info('Default Path ' + SITE_NAME)
@@ -134,13 +135,14 @@ if __name__ == '__main__':
     logs_file = os.path.join(root_folder+'/var/log/app.log')
 
     logging.basicConfig(filename=logs_file, filemode='a', format='%(asctime)s - %(message)s',
-                        level=logging.INFO, datefmt="%H:%M:%S")
+                        level=logging.DEBUG, datefmt="%H:%M:%S")
+    logging.getLogger().addHandler(logging.StreamHandler())
 
     port = 8000
     if(len(sys.argv)>3):
         port = int(sys.argv[3])
-    print('Starting proxy on port ' + str(8000))
-    get_workspace_variables()
+    print('Starting proxy on port ' + str(port))
+    #get_workspace_variables()
     app.run(debug = False,port= port)
 
 
