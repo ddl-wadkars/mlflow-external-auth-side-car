@@ -11,6 +11,7 @@ def domino_authenticate(user_name,password):
         raise Exception('User Id or Password not correct')
 
 def read_auth_tokens(request:requests.Request):
+    #return "test-user-1"
     authtoken=request.headers['Authorization']
     bearer_token=''
     user_name=''

@@ -10,5 +10,5 @@ RUN pip install --user -r requirements.txt
 ADD src /app
 RUN mkdir /tmp/domino
 #USER 1000
-ENTRYPOINT ["python",  "/app/mlflow-auth-proxy.py" ] 
+ENTRYPOINT ["python",  "/app/domino-mlflow-proxy.py" ] 
 #,"https://fieldregistry.cs.domino.tech/mlflow/","/", "6010"]

@@ -70,7 +70,7 @@ def get_user_name(token):
     return json['canonicalName']
 
 def get_user_name(username,password):
-    pass
+    return "test-user-1"
 
 
 @app.route('/<path:path>',methods=['GET','POST','DELETE'])
@@ -148,12 +148,13 @@ if __name__ == '__main__':
 
     logging.basicConfig(filename=logs_file, filemode='a', format='%(asctime)s - %(message)s',
                         level=logging.INFO, datefmt="%H:%M:%S")
+    logging.getLogger().addHandler(logging.StreamHandler())
 
     port = 8000
     if(len(sys.argv)>3):
         port = int(sys.argv[3])
-    print('Starting proxy on port ' + str(8000))
-    get_workspace_variables()
-    app.run(debug = False,port= port)
+    print('Starting proxy on port ' + str(port))
+    #get_workspace_variables()
+    app.run(debug = False,port= port, host="0.0.0.0")
 
 
