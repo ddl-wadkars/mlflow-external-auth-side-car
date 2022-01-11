@@ -1,6 +1,8 @@
 import sys
 import os
 import logging
+
+import mlflow
 from flask import Flask,request,redirect,Response
 from flask_oidc import OpenIDConnect
 import requests
@@ -39,22 +41,30 @@ def index():
     response = Response(resp.content, resp.status_code, headers)
     return response
 
+def get_experiment_tags(tags):
+    d={}
+    for t in tags:
+        d[t['key']]=t['value']
+    return d
 def access_control_for_get_experiments(path,params,resp,user_name):
     if (path.endswith('experiments/list')):
         resp_content_json = json.loads(resp.content)
         #return resp
         lst = []
         all_experiments = resp_content_json['experiments']
-
         for e in all_experiments:
-            u = f'user={user_name}'
-            if(u in e['name'] or user_name==ADMIN_USER):
-                lst.append(e)
+            if('tags' in e):
+                tags_dict = get_experiment_tags(e['tags'])
+                if (user_name == ADMIN_USER):
+                    lst.append(e)
+                elif('domino.user' in tags_dict and 'domino.user' in tags_dict and tags_dict['domino.user']==user_name):
+                    lst.append(e)
         resp_content_json['experiments']=lst
         s = json.dumps(resp_content_json)
         return s
     else:
         return ''
+
 
 
 def validate_tags(path,my_json):
@@ -139,7 +149,10 @@ def proxy(path,**kwargs):
         #excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
         excluded_headers = []
         headers = [(name, value) for (name, value) in resp.raw.headers.items() if name.lower() not in excluded_headers]
+
         response = Response(resp.content, resp.status_code, headers)
+        if (path.endswith('experiments/create') and response.status_code==200):
+            client.set_experiment_tag(response.get_json()['experiment_id'],'domino.user',user_name)
         return response
     elif request.method=='DELETE':
         resp = requests.delete(f'{SITE_NAME}{path}').content
@@ -160,7 +173,7 @@ def get_workspace_variables():
 
 
 
-
+client = None
 user_name=''
 project_name=''
 project_owner_name=''
@@ -181,6 +194,7 @@ if __name__ == '__main__':
     port = 8000
     if(len(sys.argv)>3):
         port = int(sys.argv[3])
+    client = mlflow.tracking.MlflowClient(tracking_uri=SITE_NAME)
     print('Starting proxy on port ' + str(port))
     #get_workspace_variables()
     app.run(debug = False,port= port, host="0.0.0.0")
