@@ -1,0 +1,13 @@
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: mlflow-proxy
+  namespace: domino-compute
+spec:
+  podSelector:
+    matchLabels:
+      app: mlflow-proxy
+  policyTypes:
+  - Ingress
+  ingress:
+    - {}

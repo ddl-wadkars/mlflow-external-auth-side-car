@@ -152,17 +152,6 @@ def proxy(path,**kwargs):
         response = Response(resp.content, resp.status_code)
     return response
 
-def get_workspace_variables():
-    global user_name
-    global project_name
-    global project_name
-    configs = Properties()
-    p = root_folder + '/etc/labels/' +  'labels'
-    with open(p, 'rb') as read_prop:
-        configs.load(read_prop)
-        user_name = configs.get('dominodatalab.com/starting-user-username').data.replace('"','')
-        project_name = configs.get('dominodatalab.com/project-name').data.replace('"','')
-        project_owner_name = configs.get('dominodatalab.com/project-owner-username').data.replace('"','')
 
 client=None
 SITE_NAME = "http://fieldregistry.cs.domino.tech/mlflow/"
@@ -193,7 +182,7 @@ if __name__ == '__main__':
         if(len(sys.argv)>3):
             port = int(sys.argv[3])
         print('Starting proxy on port ' + str(8000))
-    get_workspace_variables()
+
     client = mlflow.tracking.MlflowClient(tracking_uri=SITE_NAME)
     app.run(debug = False,port= port, host="0.0.0.0")
 

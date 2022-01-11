@@ -1,0 +1,22 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mlflow-proxy
+  namespace: domino-compute
+  labels:
+    app: mlflow-proxy
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mlflow-proxy
+  template:
+    metadata:
+      labels:
+        app: mlflow-proxy
+    spec:
+      containers:
+        - name: mlflow-proxy
+          image: quay.io/wadkars/mock-jit:latest
+          ports:
+            - containerPort: 6010
