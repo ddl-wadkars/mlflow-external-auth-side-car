@@ -2,6 +2,7 @@ import sys
 import os
 import logging
 from flask import Flask,request,redirect,Response
+from flask_oidc import OpenIDConnect
 import requests
 import logging
 import json
@@ -10,8 +11,26 @@ import utils
 
 app = Flask(__name__)
 ADMIN_USER='test-user-1'
+app.config.update({
+    'SECRET_KEY': 'SomethingNotEntirelySecret',
+    'TESTING': True,
+    'DEBUG': True,
+    'OIDC_CLIENT_SECRETS': '/app/client_secrets.json',
+    'OIDC_ID_TOKEN_COOKIE_SECURE': False,
+    'OIDC_REQUIRE_VERIFIED_EMAIL': False,
+    'OIDC_USER_INFO_ENABLED': True,
+    'OIDC_OPENID_REALM': 'DominoRealm',
+    'OIDC_SCOPES': ['openid', 'email', 'profile'],
+    'OIDC_INTROSPECTION_AUTH_METHOD': 'client_secret_post',
+    'OVERWRITE_REDIRECT_URI': 'https://mlflowtest.cs.domino.tech/mlflow/oidc_callback'
+})
+
+oidc = OpenIDConnect(app)
+
+
 
 @app.route('/')
+@oidc.require_login
 def index():
     logging.info('Default Path ' + SITE_NAME)
     resp = requests.get(f'{SITE_NAME}')
@@ -72,14 +91,23 @@ def get_user_name(token):
 def get_user_name(username,password):
     return "test-user-1"
 
+def get_oauth_username():
+
+    info = oidc.user_getinfo(['preferred_username', 'email', 'sub'])
+
+    username = info.get('preferred_username')
+    return username
 
 @app.route('/<path:path>',methods=['GET','POST','DELETE'])
+@oidc.require_login
 def proxy(path,**kwargs):
     global SITE_NAME
     logging.info('Default GET ' + SITE_NAME)
     logging.info('Default GET PATH ' + path)
-    user_name = utils.read_auth_tokens(request)
-    print(user_name)
+    #user_name = utils.read_auth_tokens(request)
+    #TODO: This is being called for every request, need to cache username somehow
+    user_name = get_oauth_username()
+    logging.info(f"Found user {user_name}")
     ##Read all tokens
 
     ##logging.info(request.headers)
@@ -147,7 +175,7 @@ if __name__ == '__main__':
     logs_file = os.path.join(root_folder+'/var/log/app.log')
 
     logging.basicConfig(filename=logs_file, filemode='a', format='%(asctime)s - %(message)s',
-                        level=logging.INFO, datefmt="%H:%M:%S")
+                        level=logging.DEBUG, datefmt="%H:%M:%S")
     logging.getLogger().addHandler(logging.StreamHandler())
 
     port = 8000

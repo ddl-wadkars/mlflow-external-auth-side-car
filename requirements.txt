@@ -6,3 +6,4 @@ configparser
 boto3
 mlflow
 py-healthcheck
+Flask-OIDC
