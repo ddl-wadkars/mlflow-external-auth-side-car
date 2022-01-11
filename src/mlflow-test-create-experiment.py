@@ -19,13 +19,13 @@ import logging
 TRACKING_URI = 'http://127.0.0.1:8000/'
 client = mlflow.tracking.MlflowClient(tracking_uri=TRACKING_URI)
 mlflow.tracking.set_tracking_uri(TRACKING_URI)
-os.environ['MLFLOW_TRACKING_TOKEN']='test-fake-token'
+os.environ['MLFLOW_TRACKING_TOKEN']='10464e2d75c9317ed486e1c50c0a94ce7f8da0e5208fe136c1d40bd05b26a0a0'
 def set_experiment(experiment_name,user,project):
     experiment = client.get_experiment_by_name(experiment_name)
     experiment_id = None
     if (experiment == None):
         experiment_id = client.create_experiment(experiment_name)
-        client.set_experiment_tag(experiment_id, "domino.user", user)
+        #client.set_experiment_tag(experiment_id, "domino.user", user)
         client.set_experiment_tag(experiment_id, "domino.project", project)
     else:
         experiment_id = experiment.experiment_id
@@ -34,7 +34,8 @@ def set_experiment(experiment_name,user,project):
     mlflow.set_experiment(experiment_name=experiment_name)
     return experiment
 
-experiment_name = "sameer-Fake Experiment-103"
+
+experiment_name = "sameer-Fake Experiment-1019"
 user = 'wadkars'
 project = 'mlflow-demo'
 experiment = set_experiment(experiment_name,user,project)
