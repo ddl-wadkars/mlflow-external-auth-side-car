@@ -5,3 +5,4 @@ jproperties
 configparser
 boto3
 mlflow
+Flask-OIDC
