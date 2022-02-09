@@ -12,4 +12,4 @@ ADD src /app
 RUN mkdir /tmp/domino
 RUN mkdir /tmp/domino2
 #USER 1000
-ENTRYPOINT ["python",  "/app/domino-mlflow-proxy.py" ,"http://domin-mlflo-102xycs912t2e-12b967377ef7e67b.elb.us-west-2.amazonaws.com/","/", "7010"]
+ENTRYPOINT ["python",  "/app/domino-mlflow-proxy.py" ,"http://domin-mlflo-102xycs912t2e-12b967377ef7e67b.elb.us-west-2.amazonaws.com/","/", "6010"]
