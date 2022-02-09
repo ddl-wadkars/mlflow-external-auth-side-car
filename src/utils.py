@@ -10,6 +10,7 @@ def domino_authenticate(user_name,password):
     else:
         raise Exception('User Id or Password not correct')
 
+#TODO: token exists but is not valid, throw error. 401 or 403
 def read_auth_tokens(request:requests.Request):
     #return "test-user-1"
     authtoken=request.headers['Authorization']

@@ -29,10 +29,15 @@ app.config.update({
 
 oidc = OpenIDConnect(app)
 
-
+def check_domino_login(view_func):
+    if(utils.read_auth_tokens(request)): # token exists valid
+        return view_func
+    else:
+        return oidc.require_login(view_func)
 
 @app.route('/')
-@oidc.require_login
+# @oidc.require_login
+@check_domino_login
 def index():
     logging.info('Default Path ' + SITE_NAME)
     resp = requests.get(f'{SITE_NAME}')
@@ -109,7 +114,8 @@ def get_oauth_username():
     return username
 
 @app.route('/<path:path>',methods=['GET','POST','DELETE'])
-@oidc.require_login
+# @oidc.require_login
+@check_domino_login
 def proxy(path,**kwargs):
     global SITE_NAME
     logging.info('Default GET ' + SITE_NAME)
@@ -170,7 +176,6 @@ def get_workspace_variables():
         user_name = configs.get('dominodatalab.com/starting-user-username').data.replace('"','')
         project_name = configs.get('dominodatalab.com/project-name').data.replace('"','')
         project_owner_name = configs.get('dominodatalab.com/project-owner-username').data.replace('"','')
-
 
 
 client = None

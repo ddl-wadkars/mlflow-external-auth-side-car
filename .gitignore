@@ -133,3 +133,5 @@ dmypy.json
 .idea
 root/etc/proxy-config/token
 root/etc/proxy-config/config.json
+
+src/client_secrets.json
