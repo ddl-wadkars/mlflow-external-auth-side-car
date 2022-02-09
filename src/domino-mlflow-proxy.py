@@ -150,7 +150,11 @@ def proxy(path,**kwargs):
     logging.info(request)
     logging.info(request.headers)
     print(request.path)
-    user_name = utils.read_auth_tokens(request)
+
+    domino_attributes = utils.read_auth_tokens(request)
+    print(domino_attributes)
+    user_name = utils.get_domino_user_name(domino_attributes)
+    project_name = utils.get_domino_project(domino_attributes)
     print('Returned user name ' + user_name)
     '''
     #user_name = get_oauth_username()
@@ -166,16 +170,10 @@ def proxy(path,**kwargs):
     ##logging.info(request.headers)
     ##logging.info(json.dumps(request.headers))
     if request.method=='GET':
-
         url = f'{SITE_NAME}{path}'
         resp = requests.get(f'{SITE_NAME}{path}',params=request.args)
-        print(url)
-        print(resp)
         content = access_control_for_get_experiments(path,request.args,resp,user_name)
         logging.info(url)
-        logging.info(resp)
-
-
         '''
         Rewrite this function
         
@@ -213,6 +211,8 @@ def proxy(path,**kwargs):
         if (path.endswith('experiments/create') and response.status_code==200):
             print('Setting domino user ' + user_name)
             client.set_experiment_tag(response.get_json()['experiment_id'],'domino.user',user_name)
+            if (not project_name==''):
+                client.set_experiment_tag(response.get_json()['experiment_id'], 'domino.project', project_name)
         return response
     elif request.method=='DELETE':
         resp = requests.delete(f'{SITE_NAME}{path}').content
