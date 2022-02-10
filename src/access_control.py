@@ -2,6 +2,8 @@ import os
 import requests
 import jwt
 import mlflow
+from urllib.parse import urljoin
+WHO_AM_I_ENDPOINT = 'v4/auth/principal'
 
 GET_PROJECTS_ENDPOINT = 'v4/projects'
 GET_USERS_ENDPOINT = 'v4/users'
@@ -16,7 +18,7 @@ def get_domino_api_key():
     return os.getenv('DOMINO_ADMIN_API_KEY')
 
 def get_domino_url():
-    return 'https://fieldregistry.cs.domino.tech'
+    return DOMINO_NUCLEUS_URI
 
 def can_i_create_experiment(user_name):
     return True
@@ -126,10 +128,15 @@ def encode_as_jwt(domino_api_key,domino_project_name,domino_run_id):
     encoded_jwt = jwt.encode({"domino_api_key": domino_api_key,"domino_project_name":domino_project_name,
                               "domino_run_id":domino_run_id},
                               "secret", algorithm="HS256")
-    return encoded_jwt
+    return encoded_jwt.decode()
 
+def get_mlflow_token():
+    encoded_jwt = jwt.encode({"domino_api_key": os.environ['DOMINO_USER_API_KEY'],"domino_project_name":os.environ['DOMINO_PROJECT_NAME'],
+                              "domino_run_id":os.environ['DOMINO_RUN_ID']},
+                              "secret", algorithm="HS256")
+    return encoded_jwt.decode()
 def decode_jwt(encoded_jwt=None):
-    return jwt.decode(encoded_jwt, "secret", algorithms=["HS256"])
+    return jwt.decode(encoded_jwt.encode(), "secret", algorithms=["HS256"])
 
 
 def get_run_user(mlflow_client,request_json):
@@ -151,7 +158,6 @@ def get_run_user(mlflow_client,request_json):
 def is_user_authorized_for_run_updates(request_json):
     mlflow_client = mlflow.tracking.MlflowClient(tracking_uri=MLFLOW_TRACKING_URI)
     experiment = mlflow_client.get_experiment(request_json['experiment_id'])
-    print(experiment.tags)
     run_user = get_run_user(mlflow_client,request_json)
     if (experiment.tags['domino.user'] != run_user):
         return False
@@ -170,11 +176,57 @@ def is_user_owner_of_artifacts(run_id,user_name):
         return False
     return True
 
+
+def read_mlflow_token(request:requests.Request):
+    if('Authorization' not in request.headers):
+        return {}
+    else:
+        authtoken = request.headers['Authorization']
+        mlflow_token = authtoken[7:]
+        return decode_jwt(mlflow_token)
+
+
+def get_domino_user_name(token=''):
+    if(len(token)>0): #Use Token Based Auth
+        url = urljoin(os.environ['DOMINO_API_HOST'],WHO_AM_I_ENDPOINT)
+        headers={'X-Domino-Api-Key':token}
+        resp = requests.get(url, headers=headers)
+        return resp.json()['canonicalName']
+    else:
+        user = '-'
+        return user
+
+def configure_experiment_tags(tracking_uri,path,response,user_name,project_name,run_id):
+    print('my_tracking_uri')
+    print(tracking_uri)
+    if(not path.endswith('experiments/create')):
+        return
+
+    experiment_id = response.get_json()['experiment_id']
+    mlflow_client = mlflow.tracking.MlflowClient(tracking_uri=MLFLOW_TRACKING_URI)
+
+    mlflow_client.set_experiment_tag(experiment_id, 'domino.user', user_name)
+    if (not project_name == ''):
+        mlflow_client.set_experiment_tag(experiment_id, 'domino.project', project_name)
+    if (not run_id == ''):
+        r = get_run_details(run_id)
+        mlflow_client.set_experiment_tag(experiment_id, 'domino.run_id', run_id)
+        mlflow_client.set_experiment_tag(experiment_id, 'domino.project_id', r['project_id'])
+        mlflow_client.set_experiment_tag(experiment_id, 'domino.project_identity', r['project_name'])
+        mlflow_client.set_experiment_tag(experiment_id, 'domino.run_type', r['run_type'])
+        mlflow_client.set_experiment_tag(experiment_id, 'domino.hardware_tier', r['hardware_tier'])
+        mlflow_client.set_experiment_tag(experiment_id, 'domino.run_duration_in_seconds', r['run_duration_in_seconds'])
+        mlflow_client.set_experiment_tag(experiment_id, 'domino.estimated_cost', r['estimated_cost'])
+
+
+DOMINO_NUCLEUS_URI='http://nucleus-frontend.domino-platform:80'
 MLFLOW_TRACKING_URI=''
 if __name__ == "__main__":
     import sys
     os.environ['DOMINO_URL'] = sys.argv[1]
     os.environ['DOMINO_ADMIN_API_KEY']=sys.argv[2]
+
+    print(decode_jwt('eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJkb21pbm9fYXBpX2tleSI6IjI5NTc3ZDI3YjFkMWIyOTM1NGZiOWU5NzA5YTZmNmIzNTBmYWNhMzQ5OWZiMGE1ZDMzMjQ5ZDhjNTgyODY1ZDAiLCJkb21pbm9fcHJvamVjdF9uYW1lIjoibWxmbG93LWRlbW8iLCJkb21pbm9fcnVuX2lkIjoiNjIwNTIwNTZkMmNiMDk3NWY0M2NhODhjIn0.d7ok32mDYhs1KEu6MY8B6FXXl7si2JRHUCrr5Mr2DZY'))
     print(get_run_details('6203ebfcd2cb0975f43ca4fb'))
     print(encode_as_jwt('a','b','c'))
     print(decode_jwt(encode_as_jwt('a','b','c')))

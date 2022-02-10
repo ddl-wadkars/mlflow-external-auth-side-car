@@ -25,13 +25,16 @@ def set_experiment(experiment_name,user,project):
     experiment_id = None
     if (experiment == None):
         experiment_id = client.create_experiment(experiment_name)
-        #client.set_experiment_tag(experiment_id, "domino.user", user)
+        client.set_experiment_tag(experiment_id, "domino.user", user)
         client.set_experiment_tag(experiment_id, "domino.project", project)
     else:
         experiment_id = experiment.experiment_id
 
     experiment = client.get_experiment(experiment_id)
+
     mlflow.set_experiment(experiment_name=experiment_name)
+    mlflow.start_run
+    mlflow.st
     return experiment
 
 

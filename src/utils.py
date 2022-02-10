@@ -1,6 +1,5 @@
 import requests
 import os
-import base64
 from urllib.parse import urljoin
 who_am_i_endpoint = 'v4/auth/principal'
 
@@ -43,22 +42,8 @@ def get_domino_user_name(domino_attributes):
 
 
 def read_auth_tokens(request:requests.Request):
-    print(request.headers)
-    authtoken=''
-    if('Authorization' not in request.headers):
-        authtoken = ''
-    else:
-        authtoken=request.headers['Authorization']
     domino_attributes = parse_mlflow_token(read_mlflow_token(request))
     return domino_attributes
-    '''
-    user_name=''
-    password=''
-    if (authtoken.startswith("Bearer ")):
-        bearer_token = authtoken[7:]
-        return get_user_name(token=bearer_token)
-    '''
-
     '''
     if (authtoken.startswith("Basic ")):
         basic_auth = base64.b64decode(authtoken[6:])
@@ -74,8 +59,6 @@ def get_user_name(token='',user=''):
         url = urljoin(os.environ['DOMINO_API_HOST'],who_am_i_endpoint)
         headers={'X-Domino-Api-Key':token}
         resp = requests.get(url, headers=headers)
-        print(resp.json())
-        print( resp.json()['canonicalName'])
         return resp.json()['canonicalName']
     else:
         user = 'wadkars'

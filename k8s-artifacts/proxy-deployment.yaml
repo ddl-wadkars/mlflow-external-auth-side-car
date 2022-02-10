@@ -5,7 +5,6 @@ metadata:
   namespace: domino-compute
   labels:
     app: mlflow-proxy
-    tt: tb
 spec:
   replicas: 1
   selector:
@@ -18,6 +17,6 @@ spec:
     spec:
       containers:
         - name: mlflow-proxy
-          image: quay.io/wadkars/mock-jit:localv4
+          image: quay.io/wadkars/mock-jit:localv2
           ports:
             - containerPort: 6010
