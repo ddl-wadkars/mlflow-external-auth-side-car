@@ -1,7 +1,7 @@
 import sys
 import os
 import logging
-from flask import Flask,request,redirect,Response
+from flask import Flask, request, redirect, Response
 import requests
 import logging
 import json
@@ -17,7 +17,7 @@ from collections import namedtuple
 from flask_oidc import OpenIDConnect
 
 app = Flask(__name__)
-ADMIN_USER='wadkars'
+ADMIN_USER = 'wadkars'
 app.config.update({
     'SECRET_KEY': 'SomethingNotEntirelySecret',
     'TESTING': True,
@@ -31,7 +31,7 @@ app.config.update({
     'OIDC_INTROSPECTION_AUTH_METHOD': 'client_secret_post',
     'OVERWRITE_REDIRECT_URI': 'https://fieldregistry.cs.domino.tech/mlflow/oidc_callback'
 })
-#oidc = OpenIDConnect(app)
+# oidc = OpenIDConnect(app)
 
 '''
 def authorize(view_func=None):
@@ -49,8 +49,10 @@ def authorize(view_func=None):
         return view_func(*args, **kwargs)
     return decorated
 '''
+
+
 @app.route('/')
-#@oidc.require_login
+# @oidc.require_login
 def index():
     logging.info('Default Path ' + MLFLOW_TRACKING_URI)
     resp = requests.get(f'{MLFLOW_TRACKING_URI}')
@@ -59,35 +61,37 @@ def index():
     response = Response(resp.content, resp.status_code, headers)
     return response
 
+
 def get_experiment_tags(tags):
-    d={}
+    d = {}
     for t in tags:
-        d[t['key']]=t['value']
+        d[t['key']] = t['value']
     return d
 
-def access_control_for_get_experiments(path,params,resp,user_name):
+
+def access_control_for_get_experiments(path, params, resp, user_name):
     if (path.endswith('experiments/list')):
         resp_content_json = json.loads(resp.content)
         print(path)
-        #return resp
+        # return resp
         lst = []
         all_experiments = resp_content_json['experiments']
         for e in all_experiments:
-            if('tags' in e):
+            if ('tags' in e):
                 tags_dict = get_experiment_tags(e['tags'])
                 if (user_name == ADMIN_USER):
                     lst.append(e)
-                elif('domino.user' in tags_dict and 'domino.user' in tags_dict and tags_dict['domino.user']==user_name):
+                elif ('domino.user' in tags_dict and 'domino.user' in tags_dict and tags_dict[
+                    'domino.user'] == user_name):
                     lst.append(e)
-        resp_content_json['experiments']=lst
+        resp_content_json['experiments'] = lst
         s = json.dumps(resp_content_json)
         return s
     else:
         return ''
 
 
-
-def validate_tags(path,my_json,user_name,project_name):
+def validate_tags(path, my_json, user_name, project_name):
     if (path.endswith('runs/create')):
         tags = my_json['tags']
         user_found = False
@@ -107,10 +111,13 @@ def validate_tags(path,my_json,user_name,project_name):
             return 'You must provide correct tag values for mlflow.user'
     return ''
 
+
 def get_user_name(token):
-    headers={'X-Domino-Api-Key':token}
-    json = requests.get(os.environ['DOMINO_API_HOST']+who_am_i_endpoint, headers=headers)
+    headers = {'X-Domino-Api-Key': token}
+    json = requests.get(os.environ['DOMINO_API_HOST'] + who_am_i_endpoint, headers=headers)
     return json['canonicalName']
+
+
 '''
 def get_oauth_username():
 
@@ -119,27 +126,29 @@ def get_oauth_username():
     username = info.get('preferred_username')
     return username
 '''
-def get_user_name(username,password):
+
+
+def get_user_name(username, password):
     pass
 
 
 def my_function_decorator(func):
     @wraps(func)
     def decorated_function(path, **kwargs):
-        if(request.method=='POST' and request.path.path.endswith('experiment/create')):
+        if (request.method == 'POST' and request.path.path.endswith('experiment/create')):
             my_json = request.json.to_dict()
             my_json['tags']['test'] = 'test-tag'
             request.json = ImmutableMultiDict(my_json)
             return func(path, **kwargs)
         else:
             return func(path, **kwargs)
+
     return decorated_function
 
 
-
-@app.route('/<path:path>',methods=['GET','POST','DELETE'])
-#@oidc.require_login
-def proxy(path,**kwargs):
+@app.route('/<path:path>', methods=['GET', 'POST', 'DELETE'])
+# @oidc.require_login
+def proxy(path, **kwargs):
     logging.info('Default GET ' + MLFLOW_TRACKING_URI)
     logging.info('Default GET PATH ' + path)
     print(request.path)
@@ -152,7 +161,7 @@ def proxy(path,**kwargs):
     '''
     #user_name = get_oauth_username()
 
-    
+
     if(user_name==None):
         logging.warning('Now REDIRECTING ' + request.url)
         oidc.redirect_to_auth_server()
@@ -162,11 +171,11 @@ def proxy(path,**kwargs):
 
     ##logging.info(request.headers)
     ##logging.info(json.dumps(request.headers))
-    if request.method=='GET':
+    if request.method == 'GET':
         url = f'{MLFLOW_TRACKING_URI}{path}'
-        resp = requests.get(f'{MLFLOW_TRACKING_URI}{path}',params=request.args)
+        resp = requests.get(f'{MLFLOW_TRACKING_URI}{path}', params=request.args)
 
-        content = access_control_for_get_experiments(path,request.args,resp,user_name)
+        content = access_control_for_get_experiments(path, request.args, resp, user_name)
         logging.info(url)
 
         if (path.endswith('experiments/list')):
@@ -186,7 +195,7 @@ def proxy(path,**kwargs):
             return Response(json.dumps(resp_content_json), resp.status_code, resp.headers)
         '''
         Rewrite this function
-        
+
         if (path.endswith('artifacts/list')):
             r = client.get_run(request.args['run_uuid'])
             exp = client.get_experiment(r.info.experiment_id)
@@ -198,11 +207,11 @@ def proxy(path,**kwargs):
             content = json.dumps(c)
         '''
         if (path.endswith('artifacts/list')):
-            if(not access_control.is_user_owner_of_artifacts(request.args['run_uuid'],user_name)):
-                #Filter all files
+            if (not access_control.is_user_owner_of_artifacts(request.args['run_uuid'], user_name)):
+                # Filter all files
                 c = json.loads(resp.content)
                 c['files'] = []
-                resp.json=c
+                resp.json = c
             return resp
 
             '''
@@ -230,52 +239,43 @@ def proxy(path,**kwargs):
 
         '''
 
-        #excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
-        excluded_headers=[]
-        headers = [(name, value) for (name, value) in  resp.raw.headers.items() if name.lower() not in excluded_headers]
-        if(resp.status_code==500):
+        # excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
+        excluded_headers = []
+        headers = [(name, value) for (name, value) in resp.raw.headers.items() if name.lower() not in excluded_headers]
+        if (resp.status_code == 500):
             print(resp.content)
-        if(content==''):
+        if (content == ''):
             response = Response(resp.content, resp.status_code, headers)
         else:
             response = Response(content, resp.status_code, headers)
         return response
-    elif request.method=='POST':
+    elif request.method == 'POST':
         request_json = request.json
-        #error_str = validate_tags(path,request.get_json())
-        #if(not error_str==''):
+        # error_str = validate_tags(path,request.get_json())
+        # if(not error_str==''):
         #    response = Response(error_str, 400)
         if path.endswith('runs/create'):
-            if(not access_control.is_user_authorized_for_run_updates(request_json)):
+            if (not access_control.is_user_authorized_for_run_updates(request_json)):
                 response = Response(
                     'Unauthorized to create run in experiment. Not experiment owner', 403)
                 return response
         elif path.endswith('runs/delete'):
-            if(not access_control.is_user_authorized_for_run_updates(request_json)):
+            if (not access_control.is_user_authorized_for_run_updates(request_json)):
                 response = Response(
                     'Unauthorized to create run in experiment. Not experiment owner', 403)
                 return response
         print('tttttttt')
-        resp = requests.post(f'{MLFLOW_TRACKING_URI}{path}',json=request_json)
-        return resp
+        resp = requests.post(f'{MLFLOW_TRACKING_URI}{path}', json=request_json)
         excluded_headers = []
         headers = [(name, value) for (name, value) in resp.raw.headers.items() if name.lower() not in excluded_headers]
         response = Response(resp.content, resp.status_code, headers)
-        #excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
-        print(resp.json())
-        print(resp.status_code)
-        print(MLFLOW_TRACKING_URI)
-        print(path)
-        print(path.endswith('experiments/create'))
-        print(path.endswith('experiments/create') and resp.status_code==200)
-        print('xxxxxxzz2')
-        print('adding tagsx7889x')
-        access_control.configure_experiment_tags(MLFLOW_TRACKING_URI,path, resp, project_name, domino_run_id)
+        # excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
+        access_control.configure_experiment_tags(path, resp.json(), user_name, project_name, domino_run_id)
         '''
         if (path.endswith('experiments/create') and resp.status_code==200):
             print('adding tags' + resp.get_json()['experiment_id'])
             access_control.configure_experiment_tags(path,resp.get_json()['experiment_id'],project_name,domino_run_id)
-            
+
             print('Setting domino user ' + user_name)
             client.set_experiment_tag(response.get_json()['experiment_id'],'domino.user',user_name)
             if (not project_name==''):
@@ -284,25 +284,26 @@ def proxy(path,**kwargs):
             print('Where here')
         '''
         return response
-    elif request.method=='DELETE':
+    elif request.method == 'DELETE':
         resp = requests.delete(f'{MLFLOW_TRACKING_URI}{path}').content
         response = Response(resp.content, resp.status_code)
-    #return response
+    # return response
 
 
-client=None
+client = None
 MLFLOW_TRACKING_URI = "http://fieldregistry.cs.domino.tech/mlflow/"
-#user_name=''
-#project_name=''
-#project_owner_name=''
-root_folder=''
+# user_name=''
+# project_name=''
+# project_owner_name=''
+root_folder = ''
 who_am_i_endpoint = 'v4/auth/principal'
 
 if __name__ == '__main__':
+    os.environ['DOMINO_API_HOST'] = 'https://fieldregistry.cs.domino.tech/'
     print(os.getcwd())
     port = 8000
-    if(len(sys.argv)==1):
-        MLFLOW_TRACKING_URI="http://fieldregistry.cs.domino.tech/mlflow/"
+    if (len(sys.argv) == 1):
+        MLFLOW_TRACKING_URI = "http://fieldregistry.cs.domino.tech/mlflow/"
         root_folder = os.getcwd() + '/../root/'
         print('Root folder ' + root_folder)
     else:
@@ -310,19 +311,20 @@ if __name__ == '__main__':
         print('Starting proxy to ' + MLFLOW_TRACKING_URI)
         root_folder = sys.argv[2]
         print('Root folder ' + root_folder)
-        logs_file = os.path.join(root_folder+'/var/log/app.log')
+        logs_file = os.path.join(root_folder + '/var/log/app.log')
 
         logging.basicConfig(filename=logs_file, filemode='a', format='%(asctime)s - %(message)s',
                             level=logging.INFO, datefmt="%H:%M:%S")
 
         port = 8000
-        if(len(sys.argv)>3):
+        if (len(sys.argv) > 3):
             port = int(sys.argv[3])
         print('Starting proxy on port ' + str(8000))
-        access_control.MLFLOW_TRACKING_URI=MLFLOW_TRACKING_URI
+        access_control.MLFLOW_TRACKING_URI = MLFLOW_TRACKING_URI
         print(access_control.MLFLOW_TRACKING_URI)
-    #client = mlflow.tracking.MlflowClient(tracking_uri=MLFLOW_TRACKING_URI)
+    access_control.MLFLOW_TRACKING_URI = MLFLOW_TRACKING_URI
+    client = mlflow.tracking.MlflowClient(tracking_uri=MLFLOW_TRACKING_URI)
 
-    app.run(debug = False,port= port, host="0.0.0.0")
+    app.run(debug=False, port=port, host="0.0.0.0")
 
 

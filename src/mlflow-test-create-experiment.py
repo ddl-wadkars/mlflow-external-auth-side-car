@@ -19,7 +19,25 @@ import logging
 TRACKING_URI = 'http://127.0.0.1:8000/'
 client = mlflow.tracking.MlflowClient(tracking_uri=TRACKING_URI)
 mlflow.tracking.set_tracking_uri(TRACKING_URI)
-os.environ['MLFLOW_TRACKING_TOKEN']='10464e2d75c9317ed486e1c50c0a94ce7f8da0e5208fe136c1d40bd05b26a0a0'
+s={'domino_api_key': '29577d27b1d1b29354fb9e9709a6f6b350faca3499fb0a5d33249d8c582865d0', 'domino_project_name': 'mlflow-demo', 'domino_run_id': '62052056d2cb0975f43ca88c'}
+import access_control
+x=access_control.encode_as_jwt('29577d27b1d1b29354fb9e9709a6f6b350faca3499fb0a5d33249d8c582865d0','mlflow-demo','62052056d2cb0975f43ca88c')
+os.environ['MLFLOW_TRACKING_TOKEN']=x
+
+name = 'master18'
+experiment_name=name
+client = mlflow.tracking.MlflowClient(tracking_uri=TRACKING_URI)
+
+experiment = client.get_experiment_by_name(name=experiment_name)
+print(experiment)
+if(experiment is None):
+    print('Creating experiment ')
+    client.create_experiment(name=experiment_name)
+    experiment = client.get_experiment_by_name(name=name)
+mlflow.set_tracking_uri(TRACKING_URI)
+mlflow.set_experiment(experiment_name=experiment_name)
+
+
 def set_experiment(experiment_name,user,project):
     experiment = client.get_experiment_by_name(experiment_name)
     experiment_id = None
@@ -38,7 +56,7 @@ def set_experiment(experiment_name,user,project):
     return experiment
 
 
-experiment_name = "sameer-Fake Experiment-1019"
+experiment_name = "sameer-Fake Experiment-120"
 user = 'wadkars'
 project = 'mlflow-demo'
 experiment = set_experiment(experiment_name,user,project)

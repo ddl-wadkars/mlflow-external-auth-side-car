@@ -257,20 +257,11 @@ def proxy(path,**kwargs):
                 return response
         print('tttttttt')
         resp = requests.post(f'{MLFLOW_TRACKING_URI}{path}',json=request_json)
-        return resp
         excluded_headers = []
         headers = [(name, value) for (name, value) in resp.raw.headers.items() if name.lower() not in excluded_headers]
         response = Response(resp.content, resp.status_code, headers)
         #excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
-        print(resp.json())
-        print(resp.status_code)
-        print(MLFLOW_TRACKING_URI)
-        print(path)
-        print(path.endswith('experiments/create'))
-        print(path.endswith('experiments/create') and resp.status_code==200)
-        print('xxxxxxzz2')
-        print('adding tagsx7889x')
-        access_control.configure_experiment_tags(MLFLOW_TRACKING_URI,path, resp, project_name, domino_run_id)
+        access_control.configure_experiment_tags(path, resp.json(), user_name,project_name, domino_run_id)
         '''
         if (path.endswith('experiments/create') and resp.status_code==200):
             print('adding tags' + resp.get_json()['experiment_id'])
@@ -299,6 +290,7 @@ root_folder=''
 who_am_i_endpoint = 'v4/auth/principal'
 
 if __name__ == '__main__':
+    os.environ['DOMINO_API_HOST'] = 'https://fieldregistry.cs.domino.tech/'
     print(os.getcwd())
     port = 8000
     if(len(sys.argv)==1):
@@ -321,7 +313,8 @@ if __name__ == '__main__':
         print('Starting proxy on port ' + str(8000))
         access_control.MLFLOW_TRACKING_URI=MLFLOW_TRACKING_URI
         print(access_control.MLFLOW_TRACKING_URI)
-    #client = mlflow.tracking.MlflowClient(tracking_uri=MLFLOW_TRACKING_URI)
+    access_control.MLFLOW_TRACKING_URI = MLFLOW_TRACKING_URI
+    client = mlflow.tracking.MlflowClient(tracking_uri=MLFLOW_TRACKING_URI)
 
     app.run(debug = False,port= port, host="0.0.0.0")
 

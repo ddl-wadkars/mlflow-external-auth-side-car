@@ -115,7 +115,7 @@ def get_run_details(run_id):
     details = get_current_run_details()
     if run_id in details:
         return details[run_id]
-    return {}
+    return None
 
 def get_experiment_rights(user_id,experiment_id,tags={}):
     #If Experiment and Projects are linked, return both
@@ -128,7 +128,7 @@ def encode_as_jwt(domino_api_key,domino_project_name,domino_run_id):
     encoded_jwt = jwt.encode({"domino_api_key": domino_api_key,"domino_project_name":domino_project_name,
                               "domino_run_id":domino_run_id},
                               "secret", algorithm="HS256")
-    return encoded_jwt.decode()
+    return encoded_jwt
 
 def get_mlflow_token():
     encoded_jwt = jwt.encode({"domino_api_key": os.environ['DOMINO_USER_API_KEY'],"domino_project_name":os.environ['DOMINO_PROJECT_NAME'],
@@ -196,13 +196,11 @@ def get_domino_user_name(token=''):
         user = '-'
         return user
 
-def configure_experiment_tags(tracking_uri,path,response,user_name,project_name,run_id):
-    print('my_tracking_uri')
-    print(tracking_uri)
+def configure_experiment_tags(path,experiment_json,user_name,project_name,run_id):
     if(not path.endswith('experiments/create')):
         return
 
-    experiment_id = response.get_json()['experiment_id']
+    experiment_id = experiment_json['experiment_id']
     mlflow_client = mlflow.tracking.MlflowClient(tracking_uri=MLFLOW_TRACKING_URI)
 
     mlflow_client.set_experiment_tag(experiment_id, 'domino.user', user_name)
@@ -210,16 +208,18 @@ def configure_experiment_tags(tracking_uri,path,response,user_name,project_name,
         mlflow_client.set_experiment_tag(experiment_id, 'domino.project', project_name)
     if (not run_id == ''):
         r = get_run_details(run_id)
-        mlflow_client.set_experiment_tag(experiment_id, 'domino.run_id', run_id)
-        mlflow_client.set_experiment_tag(experiment_id, 'domino.project_id', r['project_id'])
-        mlflow_client.set_experiment_tag(experiment_id, 'domino.project_identity', r['project_name'])
-        mlflow_client.set_experiment_tag(experiment_id, 'domino.run_type', r['run_type'])
-        mlflow_client.set_experiment_tag(experiment_id, 'domino.hardware_tier', r['hardware_tier'])
-        mlflow_client.set_experiment_tag(experiment_id, 'domino.run_duration_in_seconds', r['run_duration_in_seconds'])
-        mlflow_client.set_experiment_tag(experiment_id, 'domino.estimated_cost', r['estimated_cost'])
+        if(r is not None):
+            mlflow_client.set_experiment_tag(experiment_id, 'domino.run_id', run_id)
+            mlflow_client.set_experiment_tag(experiment_id, 'domino.project_id', r['project_id'])
+            mlflow_client.set_experiment_tag(experiment_id, 'domino.project_identity', r['project_name'])
+            mlflow_client.set_experiment_tag(experiment_id, 'domino.run_type', r['run_type'])
+            mlflow_client.set_experiment_tag(experiment_id, 'domino.hardware_tier', r['hardware_tier'])
+            mlflow_client.set_experiment_tag(experiment_id, 'domino.run_duration_in_seconds', r['run_duration_in_seconds'])
+            mlflow_client.set_experiment_tag(experiment_id, 'domino.estimated_cost', r['estimated_cost'])
 
 
 DOMINO_NUCLEUS_URI='http://nucleus-frontend.domino-platform:80'
+#DOMINO_NUCLEUS_URI='https://fieldregistry.cs.domino.tech/'
 MLFLOW_TRACKING_URI=''
 if __name__ == "__main__":
     import sys
