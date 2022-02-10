@@ -44,9 +44,11 @@ def get_domino_user_name(domino_attributes):
 
 def read_auth_tokens(request:requests.Request):
     print(request.headers)
+    authtoken=''
     if('Authorization' not in request.headers):
-        return None
-    authtoken=request.headers['Authorization']
+        authtoken = ''
+    else:
+        authtoken=request.headers['Authorization']
     domino_attributes = parse_mlflow_token(read_mlflow_token(request))
     return domino_attributes
     '''
@@ -72,9 +74,11 @@ def get_user_name(token='',user=''):
         url = urljoin(os.environ['DOMINO_API_HOST'],who_am_i_endpoint)
         headers={'X-Domino-Api-Key':token}
         resp = requests.get(url, headers=headers)
+        print(resp.json())
         print( resp.json()['canonicalName'])
         return resp.json()['canonicalName']
     else:
+        user = 'wadkars'
         return user
 
 

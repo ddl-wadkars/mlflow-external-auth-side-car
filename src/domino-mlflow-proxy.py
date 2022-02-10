@@ -6,10 +6,13 @@ import requests
 import logging
 import json
 from jproperties import Properties
+from mlflow.exceptions import MlflowException
+
 import utils
 from functools import wraps
 from werkzeug.datastructures import ImmutableMultiDict
 import mlflow
+import access_control
 from collections import namedtuple
 from flask_oidc import OpenIDConnect
 
@@ -49,8 +52,8 @@ def authorize(view_func=None):
 @app.route('/')
 #@oidc.require_login
 def index():
-    logging.info('Default Path ' + SITE_NAME)
-    resp = requests.get(f'{SITE_NAME}')
+    logging.info('Default Path ' + MLFLOW_TRACKING_URI)
+    resp = requests.get(f'{MLFLOW_TRACKING_URI}')
     excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
     headers = [(name, value) for (name, value) in resp.raw.headers.items() if name.lower() not in excluded_headers]
     response = Response(resp.content, resp.status_code, headers)
@@ -84,8 +87,7 @@ def access_control_for_get_experiments(path,params,resp,user_name):
 
 
 
-
-def validate_tags(path,my_json):
+def validate_tags(path,my_json,user_name,project_name):
     if (path.endswith('runs/create')):
         tags = my_json['tags']
         user_found = False
@@ -101,14 +103,8 @@ def validate_tags(path,my_json):
                     user_found = True
                 else:
                     return 'mlflow.user must be the current user = ' + user_name
-
-            if (t['key'] == 'mlflow.project'):
-                if (t['value'] == project_name):
-                    project_found = True
-                else:
-                    return 'mlflow.project must be the current project = ' + project_name
-        if (not user_found or not project_found):
-            return 'You must provide correct tag values for mlflow.user and mlflow.project'
+        if (not user_found):
+            return 'You must provide correct tag values for mlflow.user'
     return ''
 
 def get_user_name(token):
@@ -144,8 +140,8 @@ def my_function_decorator(func):
 @app.route('/<path:path>',methods=['GET','POST','DELETE'])
 #@oidc.require_login
 def proxy(path,**kwargs):
-    global SITE_NAME
-    logging.info('Default GET ' + SITE_NAME)
+    global MLFLOW_TRACKING_URI
+    logging.info('Default GET ' + MLFLOW_TRACKING_URI)
     logging.info('Default GET PATH ' + path)
     logging.info(request)
     logging.info(request.headers)
@@ -170,8 +166,8 @@ def proxy(path,**kwargs):
     ##logging.info(request.headers)
     ##logging.info(json.dumps(request.headers))
     if request.method=='GET':
-        url = f'{SITE_NAME}{path}'
-        resp = requests.get(f'{SITE_NAME}{path}',params=request.args)
+        url = f'{MLFLOW_TRACKING_URI}{path}'
+        resp = requests.get(f'{MLFLOW_TRACKING_URI}{path}',params=request.args)
         content = access_control_for_get_experiments(path,request.args,resp,user_name)
         logging.info(url)
         '''
@@ -187,6 +183,35 @@ def proxy(path,**kwargs):
             c['files'] = [{'path':'1.test','is_dir':False,'file_size':100 }]
             content = json.dumps(c)
         '''
+        if (path.endswith('artifacts/list')):
+            if(not access_control.is_user_owner_of_artifacts(request.args['run_uuid'],user_name)):
+                #Filter all files
+                c = json.loads(resp.content)
+                c['files'] = []
+                resp.json=c
+            '''
+            r = client.get_run(request.args['run_uuid'])
+            exp = client.get_experiment(r.info.experiment_id)
+            #la = client.list_artifacts(run_id=request.args['run_uuid'],path='model')
+            la = client.list_artifacts(r.info.run_id,path='model')
+            print(r.info.run_id)
+            c = json.loads(resp.content)
+            c['files'] = [{'path':'1.test','is_dir':False,'file_size':100 }]
+            content = json.dumps(c)
+            '''
+        if (path.endswith('experiments/get-by-name')):
+            experiment_name=request.args['experiment_name']
+            print('Experiment Name from proxy ' + experiment_name)
+            print('User ' + user_name)
+            print('Authorized ' + str(access_control.is_user_owner_of_experiment(experiment_name, user_name)))
+            if (not access_control.is_user_owner_of_experiment(experiment_name,user_name)):
+                print('NOT AUTHORIZED - 2 Raising Exception ')
+                response = Response(
+                    'Experiment with name exists but you are not its owner', status=403)
+                #return response
+                raise MlflowException(
+                     'Experiment with name exists but you are not its owner'
+                )
 
         #excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
         excluded_headers=[]
@@ -199,11 +224,22 @@ def proxy(path,**kwargs):
             response = Response(content, resp.status_code, headers)
         return response
     elif request.method=='POST':
-        my_json = request.json
-        error_str = validate_tags(path,request.get_json())
-        if(not error_str==''):
-            response = Response(error_str, 400)
-        resp = requests.post(f'{SITE_NAME}{path}',json=my_json)
+        request_json = request.json
+        #error_str = validate_tags(path,request.get_json())
+        #if(not error_str==''):
+        #    response = Response(error_str, 400)
+        if path.endswith('runs/create'):
+            if(not access_control.is_user_authorized_for_run_updates(request_json)):
+                response = Response(
+                    'Unauthorized to create run in experiment. Not experiment owner', 403)
+                return response
+        elif path.endswith('runs/delete'):
+            if(not access_control.is_user_authorized_for_run_updates(request_json)):
+                response = Response(
+                    'Unauthorized to create run in experiment. Not experiment owner', 403)
+                return response
+
+        resp = requests.post(f'{MLFLOW_TRACKING_URI}{path}',json=request_json)
         #excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
         excluded_headers = []
         headers = [(name, value) for (name, value) in resp.raw.headers.items() if name.lower() not in excluded_headers]
@@ -213,18 +249,19 @@ def proxy(path,**kwargs):
             client.set_experiment_tag(response.get_json()['experiment_id'],'domino.user',user_name)
             if (not project_name==''):
                 client.set_experiment_tag(response.get_json()['experiment_id'], 'domino.project', project_name)
+
         return response
     elif request.method=='DELETE':
-        resp = requests.delete(f'{SITE_NAME}{path}').content
+        resp = requests.delete(f'{MLFLOW_TRACKING_URI}{path}').content
         response = Response(resp.content, resp.status_code)
     return response
 
 
 client=None
-SITE_NAME = "http://fieldregistry.cs.domino.tech/mlflow/"
-user_name=''
-project_name=''
-project_owner_name=''
+MLFLOW_TRACKING_URI = "http://fieldregistry.cs.domino.tech/mlflow/"
+#user_name=''
+#project_name=''
+#project_owner_name=''
 root_folder=''
 who_am_i_endpoint = 'v4/auth/principal'
 
@@ -232,12 +269,12 @@ if __name__ == '__main__':
     print(os.getcwd())
     port = 8000
     if(len(sys.argv)==1):
-        SITE_NAME="http://fieldregistry.cs.domino.tech/mlflow/"
+        MLFLOW_TRACKING_URI="http://fieldregistry.cs.domino.tech/mlflow/"
         root_folder = os.getcwd() + '/../root/'
         print('Root folder ' + root_folder)
     else:
-        SITE_NAME = sys.argv[1]
-        print('Starting proxy to ' + SITE_NAME)
+        MLFLOW_TRACKING_URI = sys.argv[1]
+        print('Starting proxy to ' + MLFLOW_TRACKING_URI)
         root_folder = sys.argv[2]
         print('Root folder ' + root_folder)
         logs_file = os.path.join(root_folder+'/var/log/app.log')
@@ -249,8 +286,8 @@ if __name__ == '__main__':
         if(len(sys.argv)>3):
             port = int(sys.argv[3])
         print('Starting proxy on port ' + str(8000))
-
-    client = mlflow.tracking.MlflowClient(tracking_uri=SITE_NAME)
+    access_control.MLFLOW_TRACKING_URI=MLFLOW_TRACKING_URI
+    client = mlflow.tracking.MlflowClient(tracking_uri=MLFLOW_TRACKING_URI)
 
     app.run(debug = False,port= port, host="0.0.0.0")
 

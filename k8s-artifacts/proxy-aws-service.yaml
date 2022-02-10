@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: mlflow-aws-proxy
+  namespace: domino-compute
+spec:
+  selector:
+    app: mlflow-aws-proxy
+  type: ClusterIP
+  ports:
+    - protocol: TCP
+      port: 6010
+      targetPort: 6010

@@ -1,23 +1,23 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: mlflow-proxy
+  name: mlflow-aws-proxy
   namespace: domino-compute
   labels:
-    app: mlflow-proxy
-    tt: tb
+    app: mlflow-aws-proxy
+    tt: t
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: mlflow-proxy
+      app: mlflow-aws-proxy
   template:
     metadata:
       labels:
-        app: mlflow-proxy
+        app: mlflow-aws-proxy
     spec:
       containers:
-        - name: mlflow-proxy
-          image: quay.io/wadkars/mock-jit:localv4
+        - name: mlflow-aws-proxy
+          image: quay.io/wadkars/mock-jit:awsv2
           ports:
             - containerPort: 6010
