@@ -19,12 +19,12 @@ import logging
 TRACKING_URI = 'http://127.0.0.1:8000/'
 client = mlflow.tracking.MlflowClient(tracking_uri=TRACKING_URI)
 mlflow.tracking.set_tracking_uri(TRACKING_URI)
-s={'domino_api_key': '29577d27b1d1b29354fb9e9709a6f6b350faca3499fb0a5d33249d8c582865d0', 'domino_project_name': 'mlflow-demo', 'domino_run_id': '62052056d2cb0975f43ca88c'}
+s={'domino_api_key': '', 'domino_project_name': 'mlflow-demo', 'domino_run_id': '6205b52dd2cb0975f43cccaa'}
 import access_control
-x=access_control.encode_as_jwt('29577d27b1d1b29354fb9e9709a6f6b350faca3499fb0a5d33249d8c582865d0','mlflow-demo','6205816cd2cb0975f43cbb39')
+x=access_control.encode_as_jwt('','mlflow-demo','6205816cd2cb0975f43cbb39')
 os.environ['MLFLOW_TRACKING_TOKEN']=x
 
-name = 'master210'
+name = 'master213'
 experiment_name=name
 client = mlflow.tracking.MlflowClient(tracking_uri=TRACKING_URI)
 

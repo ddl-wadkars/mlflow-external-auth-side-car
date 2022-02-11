@@ -198,13 +198,13 @@ def get_domino_user_name(token=''):
         resp = requests.get(url, headers=headers)
         return resp.json()['canonicalName']
     else:
-        user = 'wadkars'
+        user = '-'
         return user
 
 def configure_experiment_tags(user_api_key,path,experiment_json,user_name,project_name,run_id):
     if(not path.endswith('experiments/create')):
         return
-
+    print(experiment_json)
     experiment_id = experiment_json['experiment_id']
     mlflow_client = mlflow.tracking.MlflowClient(tracking_uri=MLFLOW_TRACKING_URI)
 
@@ -224,9 +224,11 @@ def configure_experiment_tags(user_api_key,path,experiment_json,user_name,projec
             mlflow_client.set_experiment_tag(experiment_id, 'domino.estimated_cost', r['estimated_cost'])
 
 def configure_run_tags(user_api_key,path,run_json,user_name,project_name,domino_run_id):
+    print('creating run tags')
     if(not path.endswith('runs/create')):
         return
     mlflow_run_id = run_json['run']['info']['run_id']
+    print(mlflow_run_id)
     mlflow_client = mlflow.tracking.MlflowClient(tracking_uri=MLFLOW_TRACKING_URI)
 
     mlflow_client.set_tag(mlflow_run_id, 'domino.user', user_name)
@@ -234,13 +236,17 @@ def configure_run_tags(user_api_key,path,run_json,user_name,project_name,domino_
         mlflow_client.set_tag(mlflow_run_id, 'domino.project', project_name)
     if (not domino_run_id == ''):
         r = get_run_details(user_api_key,domino_run_id)
+        print(r)
         if(r is not None):
+            mlflow_client.set_tag(mlflow_run_id, 'domino.run_id', domino_run_id)
             mlflow_client.set_tag(mlflow_run_id, 'domino.project_id', r['project_id'])
             mlflow_client.set_tag(mlflow_run_id, 'domino.project_identity', r['project_name'])
             mlflow_client.set_tag(mlflow_run_id, 'domino.run_type', r['run_type'])
             mlflow_client.set_tag(mlflow_run_id, 'domino.hardware_tier', r['hardware_tier'])
             mlflow_client.set_tag(mlflow_run_id, 'domino.run_duration_in_seconds', r['run_duration_in_seconds'])
             mlflow_client.set_tag(mlflow_run_id, 'domino.estimated_cost', r['estimated_cost'])
+
+
 
 DOMINO_NUCLEUS_URI='http://nucleus-frontend.domino-platform:80'
 #DOMINO_NUCLEUS_URI='https://fieldregistry.cs.domino.tech/'

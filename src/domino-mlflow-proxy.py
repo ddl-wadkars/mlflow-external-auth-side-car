@@ -152,6 +152,7 @@ def proxy(path, **kwargs):
     logging.info('Default GET ' + MLFLOW_TRACKING_URI)
     logging.info('Default GET PATH ' + path)
     print(request.path)
+    print('PROXIED ' + request.path)
 
     domino_attributes = access_control.read_mlflow_token(request)
 
