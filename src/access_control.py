@@ -77,10 +77,13 @@ def get_user_auth(user_api_key):
 def get_past_run_details():
     runs_by_run_id={}
     headers = {'X-Domino-Api-Key': get_domino_api_key()}
+    print('xx')
+    print(headers)
     url = os.path.join(get_domino_url(),GET_PAST_RUNS_ENDPOINT)
     response = requests.get(url,headers=headers)
     if(response.status_code==200):
         result = response.json()
+        print(result)
         for run in result['runs']:
             current_run_tags = {}
             current_run_tags['project_id'] = run['projectId']
@@ -92,15 +95,17 @@ def get_past_run_details():
             runs_by_run_id[run['runId']]=current_run_tags
         return runs_by_run_id
 
-def get_current_run_details():
+def get_current_run_details(user_api_key):
     runs_by_run_id={}
-    headers = {'X-Domino-Api-Key': get_domino_api_key()}
+    headers = {'X-Domino-Api-Key': user_api_key}
     url = os.path.join(get_domino_url(),GET_CURRENT_RUNS_ENDPOINT)
     response = requests.get(url,headers=headers)
     if(response.status_code==200):
         result = response.json()
         for run in result:
+
             current_run_tags = {}
+            current_run_tags['id'] = run['id']
             current_run_tags['project_id'] = run['projectId']
             current_run_tags['project_name'] = run['projectIdentity']
             current_run_tags['run_type'] = run['runType']
@@ -111,8 +116,8 @@ def get_current_run_details():
     return runs_by_run_id
 
 
-def get_run_details(run_id):
-    details = get_current_run_details()
+def get_run_details(user_api_key,run_id):
+    details = get_current_run_details(user_api_key)
     if run_id in details:
         return details[run_id]
     return None
@@ -179,7 +184,7 @@ def is_user_owner_of_artifacts(run_id,user_name):
 
 def read_mlflow_token(request:requests.Request):
     if('Authorization' not in request.headers):
-        return {}
+        return {'domino_api_key':'','domino_project_name':'','domino_run_id':''}
     else:
         authtoken = request.headers['Authorization']
         mlflow_token = authtoken[7:]
@@ -193,10 +198,10 @@ def get_domino_user_name(token=''):
         resp = requests.get(url, headers=headers)
         return resp.json()['canonicalName']
     else:
-        user = '-'
+        user = 'wadkars'
         return user
 
-def configure_experiment_tags(path,experiment_json,user_name,project_name,run_id):
+def configure_experiment_tags(user_api_key,path,experiment_json,user_name,project_name,run_id):
     if(not path.endswith('experiments/create')):
         return
 
@@ -206,8 +211,9 @@ def configure_experiment_tags(path,experiment_json,user_name,project_name,run_id
     mlflow_client.set_experiment_tag(experiment_id, 'domino.user', user_name)
     if (not project_name == ''):
         mlflow_client.set_experiment_tag(experiment_id, 'domino.project', project_name)
+    print(run_id)
     if (not run_id == ''):
-        r = get_run_details(run_id)
+        r = get_run_details(user_api_key,run_id)
         if(r is not None):
             mlflow_client.set_experiment_tag(experiment_id, 'domino.run_id', run_id)
             mlflow_client.set_experiment_tag(experiment_id, 'domino.project_id', r['project_id'])
@@ -217,10 +223,29 @@ def configure_experiment_tags(path,experiment_json,user_name,project_name,run_id
             mlflow_client.set_experiment_tag(experiment_id, 'domino.run_duration_in_seconds', r['run_duration_in_seconds'])
             mlflow_client.set_experiment_tag(experiment_id, 'domino.estimated_cost', r['estimated_cost'])
 
+def configure_run_tags(user_api_key,path,run_json,user_name,project_name,domino_run_id):
+    if(not path.endswith('runs/create')):
+        return
+    mlflow_run_id = run_json['run']['info']['run_id']
+    mlflow_client = mlflow.tracking.MlflowClient(tracking_uri=MLFLOW_TRACKING_URI)
+
+    mlflow_client.set_tag(mlflow_run_id, 'domino.user', user_name)
+    if (not project_name == ''):
+        mlflow_client.set_tag(mlflow_run_id, 'domino.project', project_name)
+    if (not domino_run_id == ''):
+        r = get_run_details(user_api_key,domino_run_id)
+        if(r is not None):
+            mlflow_client.set_tag(mlflow_run_id, 'domino.project_id', r['project_id'])
+            mlflow_client.set_tag(mlflow_run_id, 'domino.project_identity', r['project_name'])
+            mlflow_client.set_tag(mlflow_run_id, 'domino.run_type', r['run_type'])
+            mlflow_client.set_tag(mlflow_run_id, 'domino.hardware_tier', r['hardware_tier'])
+            mlflow_client.set_tag(mlflow_run_id, 'domino.run_duration_in_seconds', r['run_duration_in_seconds'])
+            mlflow_client.set_tag(mlflow_run_id, 'domino.estimated_cost', r['estimated_cost'])
 
 DOMINO_NUCLEUS_URI='http://nucleus-frontend.domino-platform:80'
 #DOMINO_NUCLEUS_URI='https://fieldregistry.cs.domino.tech/'
 MLFLOW_TRACKING_URI=''
+os.environ['DOMINO_ADMIN_API_KEY']='412748c2003ff293acc416f53b3e9e6af8cb968cd91b1df4fc89c4e7c4105701'
 if __name__ == "__main__":
     import sys
     os.environ['DOMINO_URL'] = sys.argv[1]

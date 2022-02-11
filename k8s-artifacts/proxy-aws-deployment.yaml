@@ -18,6 +18,9 @@ spec:
     spec:
       containers:
         - name: mlflow-aws-proxy
-          image: quay.io/wadkars/mock-jit:awsv2
+          image: quay.io/wadkars/mock-jit:awsv5
+          env:
+            - name: DOMINO_ADMIN_API_KEY
+              value: 412748c2003ff293acc416f53b3e9e6af8cb968cd91b1df4fc89c4e7c4105701
           ports:
             - containerPort: 6010

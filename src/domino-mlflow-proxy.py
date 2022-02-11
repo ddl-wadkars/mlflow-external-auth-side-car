@@ -154,6 +154,7 @@ def proxy(path, **kwargs):
     print(request.path)
 
     domino_attributes = access_control.read_mlflow_token(request)
+
     user_name = access_control.get_domino_user_name(domino_attributes['domino_api_key'])
     project_name = domino_attributes['domino_project_name']
     domino_run_id = domino_attributes['domino_run_id']
@@ -174,70 +175,11 @@ def proxy(path, **kwargs):
     if request.method == 'GET':
         url = f'{MLFLOW_TRACKING_URI}{path}'
         resp = requests.get(f'{MLFLOW_TRACKING_URI}{path}', params=request.args)
-
+        print('-----')
+        print(resp.status_code)
         content = access_control_for_get_experiments(path, request.args, resp, user_name)
         logging.info(url)
 
-        if (path.endswith('experiments/list')):
-            resp_content_json = json.loads(resp.content)
-            # return resp
-            lst = []
-            all_experiments = resp_content_json['experiments']
-            for e in all_experiments:
-                if ('tags' in e):
-                    tags_dict = get_experiment_tags(e['tags'])
-                    if (user_name == ADMIN_USER):
-                        lst.append(e)
-                    elif ('domino.user' in tags_dict and 'domino.user' in tags_dict and tags_dict[
-                        'domino.user'] == user_name):
-                        lst.append(e)
-            resp_content_json['experiments'] = lst
-            return Response(json.dumps(resp_content_json), resp.status_code, resp.headers)
-        '''
-        Rewrite this function
-
-        if (path.endswith('artifacts/list')):
-            r = client.get_run(request.args['run_uuid'])
-            exp = client.get_experiment(r.info.experiment_id)
-            #la = client.list_artifacts(run_id=request.args['run_uuid'],path='model')
-            la = client.list_artifacts(r.info.run_id,path='model')
-            print(r.info.run_id)
-            c = json.loads(resp.content)
-            c['files'] = [{'path':'1.test','is_dir':False,'file_size':100 }]
-            content = json.dumps(c)
-        '''
-        if (path.endswith('artifacts/list')):
-            if (not access_control.is_user_owner_of_artifacts(request.args['run_uuid'], user_name)):
-                # Filter all files
-                c = json.loads(resp.content)
-                c['files'] = []
-                resp.json = c
-            return resp
-
-            '''
-            r = client.get_run(request.args['run_uuid'])
-            exp = client.get_experiment(r.info.experiment_id)
-            #la = client.list_artifacts(run_id=request.args['run_uuid'],path='model')
-            la = client.list_artifacts(r.info.run_id,path='model')
-            print(r.info.run_id)
-            c = json.loads(resp.content)
-            c['files'] = [{'path':'1.test','is_dir':False,'file_size':100 }]
-            content = json.dumps(c)
-            '''
-
-        '''
-        if (path.endswith('experiments/get-by-name')):
-            experiment_name=request.args['experiment_name']
-            print('Experiment Name from proxy ' + experiment_name)
-            print('User ' + user_name)
-            print('Authorized ' + str(access_control.is_user_owner_of_experiment(experiment_name, user_name)))
-            if (not access_control.is_user_owner_of_experiment(experiment_name,user_name)):
-                print('NOT AUTHORIZED - 2 Raising Exception ')
-                response = Response(
-                    'Experiment with name exists but you are not its owner', status=403,headers=resp.headers)
-                return response
-
-        '''
 
         # excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
         excluded_headers = []
@@ -264,13 +206,15 @@ def proxy(path, **kwargs):
                 response = Response(
                     'Unauthorized to create run in experiment. Not experiment owner', 403)
                 return response
-        print('tttttttt')
+
         resp = requests.post(f'{MLFLOW_TRACKING_URI}{path}', json=request_json)
         excluded_headers = []
         headers = [(name, value) for (name, value) in resp.raw.headers.items() if name.lower() not in excluded_headers]
         response = Response(resp.content, resp.status_code, headers)
         # excluded_headers = ['content-encoding', 'content-length', 'transfer-encoding', 'connection']
-        access_control.configure_experiment_tags(path, resp.json(), user_name, project_name, domino_run_id)
+        access_control.configure_experiment_tags(domino_attributes['domino_api_key'],   path, resp.json(), user_name, project_name, domino_run_id)
+        access_control.configure_run_tags(domino_attributes['domino_api_key'], path, resp.json(), user_name,
+                                                 project_name, domino_run_id)
         '''
         if (path.endswith('experiments/create') and resp.status_code==200):
             print('adding tags' + resp.get_json()['experiment_id'])
