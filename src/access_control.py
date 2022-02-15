@@ -180,7 +180,7 @@ def is_user_authorized_for_get(api_token,path,request_json):
     return True
 def is_user_authorized_mlflow(api_token,path,request:Request):
     mlflow_client = mlflow.tracking.MlflowClient(tracking_uri=MLFLOW_TRACKING_URI)
-    experiment,run = get_experiment_and_run(api_token,request.)
+    experiment,run = get_experiment_and_run(api_token,request.json)
     user_roles_by_project = get_domino_user_roles_by_project(api_token)
     mlflow_response:Response=None
     if(request.method=='GET'):
