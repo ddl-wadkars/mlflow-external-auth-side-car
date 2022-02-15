@@ -149,26 +149,19 @@ def my_function_decorator(func):
 @app.route('/<path:path>', methods=['GET', 'POST', 'DELETE'])
 # @oidc.require_login
 def proxy(path, **kwargs):
-    logging.info('Default GET ' + MLFLOW_TRACKING_URI)
-    logging.info('Default GET PATH ' + path)
-    print(request.path)
-    print('PROXIED ' + request.path)
+    #Only MLFLow endpoints are access controlled
 
+    if(request.method=='GET') and not (path.startsWith('2.0/mlflow/') or path.startsWith('2.0/preview/mlflow/')):
+        return requests.get(f'{MLFLOW_TRACKING_URI}{path}', params=request.args)
+    else:
+        logging.info('Default GET ' + MLFLOW_TRACKING_URI)
+        logging.info('Default GET PATH ' + path)
+        pass #This is where we apply access control
     domino_attributes = access_control.read_mlflow_token(request)
-
     user_name = access_control.get_domino_user_name(domino_attributes['domino_api_key'])
     project_name = domino_attributes['domino_project_name']
     domino_run_id = domino_attributes['domino_run_id']
-    print('Domino user name ' + user_name)
-    '''
-    #user_name = get_oauth_username()
 
-
-    if(user_name==None):
-        logging.warning('Now REDIRECTING ' + request.url)
-        oidc.redirect_to_auth_server()
-    print(user_name)
-    '''
     ##Read all tokens
 
     ##logging.info(request.headers)
@@ -176,8 +169,6 @@ def proxy(path, **kwargs):
     if request.method == 'GET':
         url = f'{MLFLOW_TRACKING_URI}{path}'
         resp = requests.get(f'{MLFLOW_TRACKING_URI}{path}', params=request.args)
-        print('-----')
-        print(resp.status_code)
         content = access_control_for_get_experiments(path, request.args, resp, user_name)
         logging.info(url)
 
@@ -232,6 +223,7 @@ def proxy(path, **kwargs):
     elif request.method == 'DELETE':
         resp = requests.delete(f'{MLFLOW_TRACKING_URI}{path}').content
         response = Response(resp.content, resp.status_code)
+        return response
     # return response
 
 
@@ -244,13 +236,14 @@ root_folder = ''
 who_am_i_endpoint = 'v4/auth/principal'
 
 if __name__ == '__main__':
-    os.environ['DOMINO_API_HOST'] = 'https://fieldregistry.cs.domino.tech/'
+    os.environ['DOMINO_API_HOST'] = 'http://127.0.0.1:8000/'
     print(os.getcwd())
     port = 8000
     if (len(sys.argv) == 1):
-        MLFLOW_TRACKING_URI = "http://fieldregistry.cs.domino.tech/mlflow/"
+        MLFLOW_TRACKING_URI = os.environ['DOMINO_API_HOST']
         root_folder = os.getcwd() + '/../root/'
         print('Root folder ' + root_folder)
+        access_control.DOMINO_NUCLEUS_URI = os.environ['DOMINO_API_HOST']
     else:
         MLFLOW_TRACKING_URI = sys.argv[1]
         print('Starting proxy to ' + MLFLOW_TRACKING_URI)
